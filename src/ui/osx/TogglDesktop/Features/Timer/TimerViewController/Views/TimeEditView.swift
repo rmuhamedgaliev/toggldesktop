@@ -63,6 +63,8 @@ class TimeEditView: NSView {
     @IBOutlet private weak var startTextField: NSTextField!
     @IBOutlet private weak var todayButton: CursorButton!
     @IBOutlet private weak var datePicker: KeyboardDatePicker!
+    @IBOutlet private weak var prevDayButton: CursorButton!
+    @IBOutlet private weak var nextDayButton: CursorButton!
     @IBOutlet private weak var dateBox: NSBox!
 
     private var calendarView: NSView { calendarViewControler.view }
@@ -78,10 +80,25 @@ class TimeEditView: NSView {
     override func awakeFromNib() {
         super.awakeFromNib()
         dateValue = Date()
+
+        // nextDayButton is the last control in key view loop
+        nextDayButton.didPressKey = { [weak self] key, modifiers in
+            if key == .tab && !modifiers.contains(.shift) {
+                self?.hideWindow()
+            }
+        }
     }
 
     override func becomeFirstResponder() -> Bool {
         startTextField.becomeFirstResponder()
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if let key = Key(rawValue: Int(event.keyCode)), key == .escape {
+            hideWindow()
+            return
+        }
+        super.keyDown(with: event)
     }
 
     // MARK: - Actions
@@ -112,6 +129,10 @@ class TimeEditView: NSView {
         calendarViewControler.prepareLayout(with: date)
         datePicker.dateValue = date
         datePicker.maxDate = Date()
+    }
+
+    private func hideWindow() {
+        window?.orderOut(nil)
     }
 
     private func showCalendar() {
@@ -150,12 +171,19 @@ extension TimeEditView: NSTextFieldDelegate {
     }
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        if commandSelector == #selector(insertTab(_:))
-            || commandSelector == #selector(insertBacktab(_:))
-            || commandSelector == #selector(cancelOperation(_:))
-            || commandSelector == #selector(insertNewline(_:)) {
-                window?.orderOut(nil)
+        if commandSelector == #selector(cancelOperation(_:))
+            || commandSelector == #selector(insertNewline(_:))
+            || commandSelector == #selector(insertBacktab(_:)) {
+
+            hideWindow()
         }
+
+        if NSApplication.shared.isFullKeyboardAccessEnabled == false {
+            if commandSelector == #selector(insertTab(_:)) {
+                hideWindow()
+            }
+        }
+
         return false
     }
 }
